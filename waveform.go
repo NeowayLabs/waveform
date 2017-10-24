@@ -50,7 +50,7 @@ func plotAudio(imgfile string, audio []int16, samplerate int) {
 	}
 
 	fmt.Printf("tmp gnuplot file: [%s]\n", f.Name())
-	gnuplotargs := fmt.Sprintf("set terminal svg; set output '%s'; plot '%s' with lines", imgfile, f.Name())
+	gnuplotargs := fmt.Sprintf("set terminal svg; set output '%s'; plot '%s' every 35 with lines", imgfile, f.Name())
 	cmd := exec.Command("gnuplot", "-e", gnuplotargs)
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = os.Stdout
