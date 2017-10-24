@@ -42,10 +42,10 @@ func plotAudio(imgfile string, audio []int16, samplerate int) {
 	abortonerr(err, "creating tmp file to generate waveform")
 	defer f.Close()
 
-	fsamplerate := float32(samplerate)
+	sampleratePerMili := float32(samplerate) / 1000
 
 	for i, sample := range audio {
-		timestamp := float32(i) / fsamplerate
+		timestamp := float32(i) / sampleratePerMili
 		f.WriteString(fmt.Sprintf("%f %d\n", timestamp, sample))
 	}
 
