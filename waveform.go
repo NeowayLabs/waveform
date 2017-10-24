@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 )
 
@@ -61,15 +62,19 @@ func plotAudio(imgfile string, audio []int16, samplerate int) {
 		"set bmargin 0",
 	}
 
-	gnuplotargs := strings.Join(gnuplotscript, ";")
+	gnuplot(gnuplotscript)
+
+	//TODO: delete tmp file
+}
+
+func gnuplot(script []string) {
+	gnuplotargs := strings.Join(script, ";")
 	fmt.Printf("running gnuplot: [%s]\n", gnuplotargs)
 	cmd := exec.Command("gnuplot", "-e", gnuplotargs)
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = os.Stdout
-	err = cmd.Run()
+	err := cmd.Run()
 	abortonerr(err, "running gnuplot")
-
-	//TODO: delete tmp file
 }
 
 func min(a int, b int) int {
@@ -88,7 +93,7 @@ func minAudioSize(audios [][]int16) int {
 	return m
 }
 
-func plotAudios(imgfile string, audios [][]int16, samplerate int) {
+func plotAudios(imgfile string, audios [][]int16, audionames []string, samplerate int) {
 	f, err := ioutil.TempFile("", "waveform")
 	abortonerr(err, "creating tmp file to generate waveform")
 	defer f.Close()
@@ -108,22 +113,28 @@ func plotAudios(imgfile string, audios [][]int16, samplerate int) {
 
 	fmt.Printf("tmp gnuplot file: [%s]\n", f.Name())
 
-	//gnuplotscript := []string{
-	//"set terminal svg",
-	//fmt.Sprintf("set output '%s'", imgfile),
-	//fmt.Sprintf("plot '%s' every 35 with lines", f.Name()),
-	//`set xlabel "time (ms)"`,
-	//`set ylabel "sample value (signed int)`,
-	//"set bmargin 0",
-	//}
+	gnuplotscript := []string{
+		"set terminal svg",
+		fmt.Sprintf("set output '%s'", imgfile),
+		`set xlabel "time (ms)"`,
+		`set ylabel "sample value (signed int)"`,
+		"set bmargin 0",
+	}
 
-	//gnuplotargs := strings.Join(gnuplotscript, ";")
-	//fmt.Printf("running gnuplot: [%s]\n", gnuplotargs)
-	//cmd := exec.Command("gnuplot", "-e", gnuplotargs)
-	//cmd.Stderr = os.Stderr
-	//cmd.Stdout = os.Stdout
-	//err = cmd.Run()
-	//abortonerr(err, "running gnuplot")
+	plots := []string{}
+	for i, audioname := range audionames {
+		plots = append(plots, fmt.Sprintf(
+			`"%s" using 1:%d title "%s" with lines`,
+			f.Name(),
+			i+2,
+			audioname,
+		))
+	}
+
+	plot := fmt.Sprintf("plot %s", strings.Join(plots, ","))
+	gnuplotscript = append(gnuplotscript, plot)
+
+	gnuplot(gnuplotscript)
 
 	//TODO: delete tmp file
 }
@@ -160,11 +171,13 @@ func main() {
 	if audiofiles != "" {
 		parsedAudios := strings.Split(audiofiles, ",")
 		audios := [][]int16{}
+		audionames := []string{}
 
 		for _, parsedAudiofile := range parsedAudios {
 			fmt.Printf("loading audio[%s]\n", parsedAudiofile)
 			audios = append(audios, loadAudio(parsedAudiofile))
+			audionames = append(audionames, filepath.Base(parsedAudiofile))
 		}
-		plotAudios(output, audios, samplerate)
+		plotAudios(output, audios, audionames, samplerate)
 	}
 }
