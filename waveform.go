@@ -47,7 +47,7 @@ func plotAudio(imgfile string, audio []int16, samplerate int) {
 
 	for i, sample := range audio {
 		timestamp := float32(i) / sampleratePerMili
-		f.WriteString(fmt.Sprintf("%f %d\n", timestamp, sample))
+		f.WriteString(fmt.Sprintf("%f %d %d\n", timestamp, sample))
 	}
 
 	fmt.Printf("tmp gnuplot file: [%s]\n", f.Name())
@@ -72,21 +72,99 @@ func plotAudio(imgfile string, audio []int16, samplerate int) {
 	//TODO: delete tmp file
 }
 
+func min(a int, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
+func minAudioSize(audios [][]int16) int {
+	m := len(audios[0])
+	audios = audios[1:]
+	for _, audio := range audios {
+		m = min(m, len(audio))
+	}
+	return m
+}
+
+func plotAudios(imgfile string, audios [][]int16, samplerate int) {
+	f, err := ioutil.TempFile("", "waveform")
+	abortonerr(err, "creating tmp file to generate waveform")
+	defer f.Close()
+
+	sampleratePerMili := float32(samplerate) / 1000
+
+	minSize := minAudioSize(audios)
+
+	for i := 0; i < minSize; i++ {
+		timestamp := float32(i) / sampleratePerMili
+		f.WriteString(fmt.Sprintf("%f", timestamp))
+		for _, audio := range audios {
+			f.WriteString(fmt.Sprintf(" %d", audio[i]))
+		}
+		f.WriteString("\n")
+	}
+
+	fmt.Printf("tmp gnuplot file: [%s]\n", f.Name())
+
+	//gnuplotscript := []string{
+	//"set terminal svg",
+	//fmt.Sprintf("set output '%s'", imgfile),
+	//fmt.Sprintf("plot '%s' every 35 with lines", f.Name()),
+	//`set xlabel "time (ms)"`,
+	//`set ylabel "sample value (signed int)`,
+	//"set bmargin 0",
+	//}
+
+	//gnuplotargs := strings.Join(gnuplotscript, ";")
+	//fmt.Printf("running gnuplot: [%s]\n", gnuplotargs)
+	//cmd := exec.Command("gnuplot", "-e", gnuplotargs)
+	//cmd.Stderr = os.Stderr
+	//cmd.Stdout = os.Stdout
+	//err = cmd.Run()
+	//abortonerr(err, "running gnuplot")
+
+	//TODO: delete tmp file
+}
+
 func main() {
 	const samplerate = 8000
 	var audiofile string
+	var audiofiles string
+	var output string
 
 	flag.StringVar(&audiofile, "audio", "", "path to audio file (only WAV PCM 8000Hz LE supported)")
+	flag.StringVar(&audiofiles, "audios", "", "comma separated list of audio files to compare")
+	flag.StringVar(&output, "output", "", "where the generated waveform will be saved")
 
 	flag.Parse()
 
-	if audiofile == "" {
+	if output == "" {
 		flag.Usage()
 		return
 	}
 
-	audio := loadAudio(audiofile)
-	plotAudio(audiofile+".waveform.svg", audio, samplerate)
+	if audiofile == "" && audiofiles == "" {
+		flag.Usage()
+		return
+	}
 
-	fmt.Println("done")
+	if audiofile != "" {
+		fmt.Printf("generating audio[%s] waveform[%s]\n", audiofile, output)
+		audio := loadAudio(audiofile)
+		plotAudio(output, audio, samplerate)
+		return
+	}
+
+	if audiofiles != "" {
+		parsedAudios := strings.Split(audiofiles, ",")
+		audios := [][]int16{}
+
+		for _, parsedAudiofile := range parsedAudios {
+			fmt.Printf("loading audio[%s]\n", parsedAudiofile)
+			audios = append(audios, loadAudio(parsedAudiofile))
+		}
+		plotAudios(output, audios, samplerate)
+	}
 }
