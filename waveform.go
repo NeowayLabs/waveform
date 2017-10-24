@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"strings"
 )
 
 func abortonerr(err error, op string) {
@@ -50,7 +51,18 @@ func plotAudio(imgfile string, audio []int16, samplerate int) {
 	}
 
 	fmt.Printf("tmp gnuplot file: [%s]\n", f.Name())
-	gnuplotargs := fmt.Sprintf("set terminal svg; set output '%s'; plot '%s' every 35 with lines", imgfile, f.Name())
+
+	gnuplotscript := []string{
+		"set terminal svg",
+		fmt.Sprintf("set output '%s'", imgfile),
+		fmt.Sprintf("plot '%s' every 35 with lines", f.Name()),
+		`set xlabel "time (ms)"`,
+		`set ylabel "sample value (signed int)`,
+		"set bmargin 0",
+	}
+
+	gnuplotargs := strings.Join(gnuplotscript, ";")
+	fmt.Printf("running gnuplot: [%s]\n", gnuplotargs)
 	cmd := exec.Command("gnuplot", "-e", gnuplotargs)
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = os.Stdout
