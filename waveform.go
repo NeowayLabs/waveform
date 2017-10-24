@@ -59,7 +59,6 @@ func plotAudio(imgfile string, audio []int16, samplerate int) {
 		fmt.Sprintf("plot '%s' every 35 with lines", f.Name()),
 		`set xlabel "time (ms)"`,
 		`set ylabel "sample value (signed int)`,
-		"set bmargin 0",
 	}
 
 	gnuplot(gnuplotscript)
@@ -118,13 +117,12 @@ func plotAudios(imgfile string, audios [][]int16, audionames []string, samplerat
 		fmt.Sprintf("set output '%s'", imgfile),
 		`set xlabel "time (ms)"`,
 		`set ylabel "sample value (signed int)"`,
-		"set bmargin 0",
 	}
 
 	plots := []string{}
 	for i, audioname := range audionames {
 		plots = append(plots, fmt.Sprintf(
-			`"%s" every 35 using 1:%d title "%s" with lines`,
+			`"%s" every 30 using 1:%d title "%s" with lines`,
 			f.Name(),
 			i+2,
 			audioname,
