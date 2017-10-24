@@ -51,8 +51,6 @@ func plotAudio(imgfile string, audio []int16, samplerate int) {
 		f.WriteString(fmt.Sprintf("%f %d %d\n", timestamp, sample))
 	}
 
-	fmt.Printf("tmp gnuplot file: [%s]\n", f.Name())
-
 	gnuplotscript := []string{
 		"set terminal svg",
 		fmt.Sprintf("set output '%s'", imgfile),
@@ -68,7 +66,6 @@ func plotAudio(imgfile string, audio []int16, samplerate int) {
 
 func gnuplot(script []string) {
 	gnuplotargs := strings.Join(script, ";")
-	fmt.Printf("running gnuplot: [%s]\n", gnuplotargs)
 	cmd := exec.Command("gnuplot", "-e", gnuplotargs)
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = os.Stdout
@@ -109,8 +106,6 @@ func plotAudios(imgfile string, audios [][]int16, audionames []string, samplerat
 		}
 		f.WriteString("\n")
 	}
-
-	fmt.Printf("tmp gnuplot file: [%s]\n", f.Name())
 
 	gnuplotscript := []string{
 		"set terminal svg",
