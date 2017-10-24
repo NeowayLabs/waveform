@@ -124,7 +124,7 @@ func plotAudios(imgfile string, audios [][]int16, audionames []string, samplerat
 	plots := []string{}
 	for i, audioname := range audionames {
 		plots = append(plots, fmt.Sprintf(
-			`"%s" using 1:%d title "%s" with lines`,
+			`"%s" every 35 using 1:%d title "%s" with lines`,
 			f.Name(),
 			i+2,
 			audioname,
