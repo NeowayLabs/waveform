@@ -29,13 +29,6 @@ func checkerr(t *testing.T, err error) {
 	}
 }
 
-func testWAV(t *testing.T, expected, got *wavHeader) {
-	if !reflect.DeepEqual(expected, got) {
-		t.Fatalf("WAV headers differs: \n===\n%#v\n===\n != \n===\n%#v\n###",
-			expected, got)
-	}
-}
-
 func testParseWAV(t *testing.T, filename string) {
 	r, err := os.Open(filename)
 	checkerr(t, err)
