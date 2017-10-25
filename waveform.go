@@ -19,9 +19,6 @@ func abortonerr(err error, op string) {
 }
 
 func loadAudio(audiofile string) (*wavHeader, []int16) {
-	// TODO(i4k): calculate the offset of data chunk
-	const wavHeaderSize = 44
-
 	audio := []int16{}
 	f, err := os.Open(audiofile)
 	abortonerr(err, "opening audio file")
