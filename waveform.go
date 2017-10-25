@@ -18,7 +18,8 @@ func abortonerr(err error, op string) {
 	}
 }
 
-func loadAudio(audiofile string) []int16 {
+func loadAudio(audiofile string) (*wavHeader, []int16) {
+	// TODO(i4k): calculate the offset of data chunk
 	const wavHeaderSize = 44
 
 	audio := []int16{}
@@ -26,20 +27,23 @@ func loadAudio(audiofile string) []int16 {
 	abortonerr(err, "opening audio file")
 	defer f.Close()
 
+	hdr, err := parseHeader(f)
+	abortonerr(err, "parsing WAV header")
+
+	// header already skipped
+
 	data, err := ioutil.ReadAll(f)
 	abortonerr(err, "opening audio file")
 
-	// TODO: parse wav header instead of just skip it
-	data = data[wavHeaderSize:]
 	for i := 0; i < len(data)-1; i += 2 {
 		sample := binary.LittleEndian.Uint16(data[i : i+2])
 		audio = append(audio, int16(sample))
 	}
 
-	return audio
+	return hdr, audio
 }
 
-func plotAudio(imgfile string, audio []int16, samplerate int) {
+func plotAudio(imgfile string, audio []int16, samplerate uint32) {
 	f, err := ioutil.TempFile("", "waveform")
 	abortonerr(err, "creating tmp file to generate waveform")
 	defer f.Close()
@@ -48,7 +52,7 @@ func plotAudio(imgfile string, audio []int16, samplerate int) {
 
 	for i, sample := range audio {
 		timestamp := float32(i) / sampleratePerMili
-		f.WriteString(fmt.Sprintf("%f %d %d\n", timestamp, sample))
+		f.WriteString(fmt.Sprintf("%f %d %d\n", timestamp, sample)) // missing format value here
 	}
 
 	gnuplotscript := []string{
@@ -89,7 +93,7 @@ func minAudioSize(audios [][]int16) int {
 	return m
 }
 
-func plotAudios(imgfile string, audios [][]int16, audionames []string, samplerate int) {
+func plotAudios(imgfile string, audios [][]int16, audionames []string, samplerate uint32) {
 	f, err := ioutil.TempFile("", "waveform")
 	abortonerr(err, "creating tmp file to generate waveform")
 	defer f.Close()
@@ -118,7 +122,7 @@ func plotAudios(imgfile string, audios [][]int16, audionames []string, samplerat
 	for i, audioname := range audionames {
 		plots = append(plots, fmt.Sprintf(
 			`"%s" every 30 using 1:%d title "%s" with lines`,
-			f.Name(),
+			filepath.ToSlash(f.Name()),
 			i+2,
 			audioname,
 		))
@@ -156,8 +160,9 @@ func main() {
 
 	if audiofile != "" {
 		fmt.Printf("generating audio[%s] waveform[%s]\n", audiofile, output)
-		audio := loadAudio(audiofile)
-		plotAudio(output, audio, samplerate)
+		hdr, audio := loadAudio(audiofile)
+
+		plotAudio(output, audio, hdr.RIFFChunkFmt.SampleRate)
 		return
 	}
 
@@ -166,11 +171,16 @@ func main() {
 		audios := [][]int16{}
 		audionames := []string{}
 
+		var (
+			hdr  *wavHeader
+			data []int16
+		)
 		for _, parsedAudiofile := range parsedAudios {
 			fmt.Printf("loading audio[%s]\n", parsedAudiofile)
-			audios = append(audios, loadAudio(parsedAudiofile))
+			hdr, data = loadAudio(parsedAudiofile)
+			audios = append(audios, data)
 			audionames = append(audionames, filepath.Base(parsedAudiofile))
 		}
-		plotAudios(output, audios, audionames, samplerate)
+		plotAudios(output, audios, audionames, hdr.RIFFChunkFmt.SampleRate)
 	}
 }
