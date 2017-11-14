@@ -134,8 +134,8 @@ func main() {
 
 	if audiofile != "" {
 		fmt.Printf("generating audio[%s] waveform[%s]\n", audiofile, output)
-		hdr, audio := waveparser.LoadAudio(audiofile)
-
+		hdr, audio, err := waveparser.LoadAudio(audiofile)
+		abortonerr(err, "loading audio")
 		plotAudio(output, audio, hdr.RIFFChunkFmt.SampleRate)
 		return
 	}
@@ -148,10 +148,12 @@ func main() {
 		var (
 			hdr  *waveparser.WavHeader
 			data []int16
+			err  error
 		)
 		for _, parsedAudiofile := range parsedAudios {
 			fmt.Printf("loading audio[%s]\n", parsedAudiofile)
-			hdr, data = waveparser.LoadAudio(parsedAudiofile)
+			hdr, data, err = waveparser.LoadAudio(parsedAudiofile)
+			abortonerr(err, "loading audio")
 			audios = append(audios, data)
 			audionames = append(audionames, filepath.Base(parsedAudiofile))
 		}
