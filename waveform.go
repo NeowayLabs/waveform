@@ -1,9 +1,9 @@
 package main
 
 import (
-	"encoding/binary"
 	"flag"
 	"fmt"
+	"github.com/NeowayLabs/waveparser"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -16,28 +16,6 @@ func abortonerr(err error, op string) {
 		fmt.Printf("%s: fatal error: %s\n", op, err)
 		os.Exit(1)
 	}
-}
-
-func loadAudio(audiofile string) (*wavHeader, []int16) {
-	audio := []int16{}
-	f, err := os.Open(audiofile)
-	abortonerr(err, "opening audio file")
-	defer f.Close()
-
-	hdr, err := parseHeader(f)
-	abortonerr(err, "parsing WAV header")
-
-	// header already skipped
-
-	data, err := ioutil.ReadAll(f)
-	abortonerr(err, "opening audio file")
-
-	for i := 0; i < len(data)-1; i += 2 {
-		sample := binary.LittleEndian.Uint16(data[i : i+2])
-		audio = append(audio, int16(sample))
-	}
-
-	return hdr, audio
 }
 
 func plotAudio(imgfile string, audio []int16, samplerate uint32) {
@@ -134,12 +112,11 @@ func plotAudios(imgfile string, audios [][]int16, audionames []string, samplerat
 }
 
 func main() {
-	const samplerate = 8000
 	var audiofile string
 	var audiofiles string
 	var output string
 
-	flag.StringVar(&audiofile, "audio", "", "path to audio file (only WAV PCM 8000Hz LE supported)")
+	flag.StringVar(&audiofile, "audio", "", "path to audio file")
 	flag.StringVar(&audiofiles, "audios", "", "comma separated list of audio files to compare")
 	flag.StringVar(&output, "output", "", "where the generated waveform will be saved")
 
@@ -157,8 +134,8 @@ func main() {
 
 	if audiofile != "" {
 		fmt.Printf("generating audio[%s] waveform[%s]\n", audiofile, output)
-		hdr, audio := loadAudio(audiofile)
-
+		hdr, audio, err := waveparser.LoadAudio(audiofile)
+		abortonerr(err, "loading audio")
 		plotAudio(output, audio, hdr.RIFFChunkFmt.SampleRate)
 		return
 	}
@@ -169,12 +146,14 @@ func main() {
 		audionames := []string{}
 
 		var (
-			hdr  *wavHeader
+			hdr  *waveparser.WavHeader
 			data []int16
+			err  error
 		)
 		for _, parsedAudiofile := range parsedAudios {
 			fmt.Printf("loading audio[%s]\n", parsedAudiofile)
-			hdr, data = loadAudio(parsedAudiofile)
+			hdr, data, err = waveparser.LoadAudio(parsedAudiofile)
+			abortonerr(err, "loading audio")
 			audios = append(audios, data)
 			audionames = append(audionames, filepath.Base(parsedAudiofile))
 		}
