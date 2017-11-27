@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/binary"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -9,6 +8,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"github.com/NeowayLabs/waveparser"
 )
 
 func abortonerr(err error, op string) {
@@ -21,20 +22,11 @@ func abortonerr(err error, op string) {
 func loadAudio(audiofile string) []int16 {
 	const wavHeaderSize = 44
 
-	audio := []int16{}
-	f, err := os.Open(audiofile)
-	abortonerr(err, "opening audio file")
-	defer f.Close()
+	wav, err := waveparser.Load(audiofile)
+	abortonerr(err, "loading audio file")
 
-	data, err := ioutil.ReadAll(f)
-	abortonerr(err, "opening audio file")
-
-	// TODO: parse wav header instead of just skip it
-	data = data[wavHeaderSize:]
-	for i := 0; i < len(data)-1; i += 2 {
-		sample := binary.LittleEndian.Uint16(data[i : i+2])
-		audio = append(audio, int16(sample))
-	}
+	audio, err := wav.Int16LESamples()
+	abortonerr(err, "loading samples as int16")
 
 	return audio
 }
