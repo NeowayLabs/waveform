@@ -3,12 +3,13 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/NeowayLabs/waveparser"
 	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"github.com/NeowayLabs/waveparser"
 )
 
 func abortonerr(err error, op string) {
@@ -134,9 +135,11 @@ func main() {
 
 	if audiofile != "" {
 		fmt.Printf("generating audio[%s] waveform[%s]\n", audiofile, output)
-		hdr, audio, err := waveparser.LoadAudio(audiofile)
+		wav, err := waveparser.Load(audiofile)
 		abortonerr(err, "loading audio")
-		plotAudio(output, audio, hdr.RIFFChunkFmt.SampleRate)
+		audio, err := wav.Int16LESamples()
+		abortonerr(err, "getting audio samples")
+		plotAudio(output, audio, wav.Header.RIFFChunkFmt.SampleRate)
 		return
 	}
 
@@ -144,19 +147,20 @@ func main() {
 		parsedAudios := strings.Split(audiofiles, ",")
 		audios := [][]int16{}
 		audionames := []string{}
+		var samplerate uint32
 
-		var (
-			hdr  *waveparser.WavHeader
-			data []int16
-			err  error
-		)
 		for _, parsedAudiofile := range parsedAudios {
 			fmt.Printf("loading audio[%s]\n", parsedAudiofile)
-			hdr, data, err = waveparser.LoadAudio(parsedAudiofile)
+			wav, err := waveparser.Load(parsedAudiofile)
 			abortonerr(err, "loading audio")
-			audios = append(audios, data)
+			audio, err := wav.Int16LESamples()
+			abortonerr(err, "getting samples")
+			audios = append(audios, audio)
 			audionames = append(audionames, filepath.Base(parsedAudiofile))
+			// TODO: not good way to handle that
+			samplerate = wav.Header.RIFFChunkFmt.SampleRate
 		}
-		plotAudios(output, audios, audionames, hdr.RIFFChunkFmt.SampleRate)
+
+		plotAudios(output, audios, audionames, samplerate)
 	}
 }
